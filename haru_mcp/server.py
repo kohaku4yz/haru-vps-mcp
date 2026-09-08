@@ -15,8 +15,12 @@ from .settings import SERVICE_NAME, Settings, load_settings
 from .tools import (
     HealthResult,
     OpenAIFileRef,
+    WorkspaceBackendHealthResult,
     health,
     shell_execute,
+    shell_job_status,
+    shell_job_stop,
+    workspace_backend_health,
     workspace_edit_file,
     workspace_get_file_info,
     workspace_import_chatgpt_file,
@@ -118,6 +122,13 @@ def build_server(settings: Settings | None = None) -> FastMCP:
     def health_tool() -> HealthResult:
         return health()
 
+    @server.tool(
+        name="workspace_backend_health",
+        description="Probe the configured filesystem, shell, and file-transfer backends so a live proxy with a dead named backend is reported unhealthy.",
+    )
+    async def workspace_backend_health_tool() -> WorkspaceBackendHealthResult:
+        return await workspace_backend_health(cfg)
+
     @server.tool(name="workspace_list_directory")
     async def list_directory_tool(path: str) -> types.CallToolResult:
         return await workspace_list_directory(cfg, path)
@@ -200,9 +211,26 @@ def build_server(settings: Settings | None = None) -> FastMCP:
             isError=False,
         )
 
-    @server.tool(name="shell_execute")
-    async def shell_execute_tool(command: str, timeout_ms: int = 5000) -> types.CallToolResult:
-        return await shell_execute(cfg, command, timeout_ms)
+    @server.tool(
+        name="shell_execute",
+        description="Run shell work as a managed job. wait_ms controls only synchronous waiting; if work is still running, a job ID is returned instead of killing it. timeout_ms is a compatibility alias for wait_ms.",
+    )
+    async def shell_execute_tool(
+        command: str,
+        wait_ms: int = 5000,
+        persistent: bool = False,
+        hard_timeout_ms: int | None = None,
+        timeout_ms: int | None = None,
+    ) -> types.CallToolResult:
+        return await shell_execute(cfg, command, wait_ms, persistent, hard_timeout_ms, timeout_ms)
+
+    @server.tool(name="shell_job_status", description="Inspect a managed shell job. Status reads refresh the observation lease for running jobs.")
+    async def shell_job_status_tool(job_id: str) -> types.CallToolResult:
+        return await shell_job_status(cfg, job_id)
+
+    @server.tool(name="shell_job_stop", description="Explicitly stop a managed shell job and its owned process group.")
+    async def shell_job_stop_tool(job_id: str) -> types.CallToolResult:
+        return await shell_job_stop(cfg, job_id)
 
     return server
 

@@ -31,6 +31,11 @@ def test_workspace_unit_represents_isolation_and_containment_boundaries():
         "Environment=TMPDIR=/var/lib/haru-workspace/tmp",
         "--host 127.0.0.1",
         "test -r /opt/haru-workspace/file_ingress_server.py",
+        "test -r /opt/haru-workspace/workspace-supervisor.py",
+        "/opt/haru-workspace/proxy/bin/python /opt/haru-workspace/workspace-supervisor.py",
+        "StartLimitIntervalSec=30s",
+        "StartLimitBurst=5",
+        "Restart=on-failure",
         "KillMode=control-group",
         "NoNewPrivileges=true",
         "PrivateTmp=true",
@@ -49,6 +54,7 @@ def test_workspace_unit_represents_isolation_and_containment_boundaries():
         assert value in unit
     assert "0.0.0.0" not in unit
     assert "--cwd" not in unit
+    assert "--named-server-config /etc/haru-workspace/servers.json" in unit
 
 
 def test_basic_gateway_example_uses_same_non_sudo_identity():

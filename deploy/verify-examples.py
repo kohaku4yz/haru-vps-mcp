@@ -78,6 +78,9 @@ def verify_static() -> None:
             "RestrictSUIDSGID=true",
             "LockPersonality=true",
             "ExecStartPre=/usr/bin/test -r /opt/haru-workspace/file_ingress_server.py",
+            "ExecStartPre=/usr/bin/test -r /opt/haru-workspace/workspace-supervisor.py",
+            "StartLimitIntervalSec=30s",
+            "StartLimitBurst=5",
         ),
         "workspace unit",
     )

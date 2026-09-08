@@ -18,8 +18,8 @@ ChatGPT / MCP client
    +------+------+
    |      |      |
    v      v      v
-filesystem shell file-transfer
- backend   backend  child
+filesystem managed-shell file-transfer
+ backend      backend     child
  loopback  loopback loopback
    |      |      |
    +------v------+
@@ -80,7 +80,11 @@ http://127.0.0.1:8766/servers/file-ingress/mcp
 
 Those endpoints are a **separate workspace-backend composition**. To build them from the selected upstream components plus Haru's bounded file-transfer child, follow [`docs/WORKSPACE-BACKENDS.md`](docs/WORKSPACE-BACKENDS.md).
 
-The public tool surface is deliberately small: gateway health, workspace directory listing/read/write/edit/move/stat, ChatGPT file import, workspace file export, and isolated shell execution delegated to the loopback backends. `workspace_import_chatgpt_file` is declared with `openai/fileParams` so the ChatGPT host can replace a current-conversation file with a short-lived file reference before the MCP call. `workspace_export_file` returns an MCP `ResourceLink`; a compatible client can read that resource and present the workspace file as a downloadable file.
+The public tool surface is deliberately small: gateway and workspace-backend health, workspace directory listing/read/write/edit/move/stat, ChatGPT file import, workspace file export, managed shell execution, and shell job status/stop. `workspace_import_chatgpt_file` is declared with `openai/fileParams` so the ChatGPT host can replace a current-conversation file with a short-lived file reference before the MCP call. `workspace_export_file` returns an MCP `ResourceLink`; a compatible client can read that resource and present the workspace file as a downloadable file.
+
+For shell work, the caller's `wait_ms` is only how long to wait synchronously. A command that is still running after that budget returns a tracked job instead of being killed; `shell_job_status` observes it and `shell_job_stop` explicitly terminates the owned process group. Output and registry retention are bounded, while automatic idle cleanup is conservative and `persistent=true` exempts intentional long-running work from idle reaping.
+
+The reference workspace service runs a small backend-aware supervisor. It probes the configured named MCP backends rather than trusting proxy liveness alone; persistent child failure makes the composition fail closed so systemd can restart it as one control group.
 
 ## Operator documentation
 
@@ -92,7 +96,7 @@ The public tool surface is deliberately small: gateway health, workspace directo
 
 ## Upstream projects
 
-The gateway imports the MCP Python SDK, AnyIO, and typing-extensions. The optional reference workspace composes `mcp-proxy`, the Model Context Protocol filesystem server, and `shell-exec-mcp` without vendoring their source.
+The gateway imports the MCP Python SDK, AnyIO, HTTPX, and typing-extensions. The optional reference workspace composes `mcp-proxy`, the Model Context Protocol filesystem server, and `shell-exec-mcp`; Haru applies a narrow repository-owned managed-job patch to the selected shell package.
 
 Exact selected workspace versions/commits, the `mcp==1.27.1` proxy-stack compatibility pin, and upstream license notes are recorded in [`THIRD-PARTY.md`](THIRD-PARTY.md).
 

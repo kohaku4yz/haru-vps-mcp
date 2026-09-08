@@ -2,6 +2,8 @@
 Description=Haru workspace MCP backends (example)
 After=network.target
 ConditionPathIsDirectory=/srv/haru-workspace
+StartLimitIntervalSec=30s
+StartLimitBurst=5
 
 [Service]
 Type=simple
@@ -21,8 +23,9 @@ ExecStartPre=/usr/bin/mkdir -p /var/lib/haru-workspace/home /var/lib/haru-worksp
 ExecStartPre=/usr/bin/chmod 0700 /var/lib/haru-workspace/home /var/lib/haru-workspace/tmp
 ExecStartPre=/usr/bin/test -x /opt/haru-workspace/proxy/bin/mcp-proxy
 ExecStartPre=/usr/bin/test -r /opt/haru-workspace/file_ingress_server.py
+ExecStartPre=/usr/bin/test -r /opt/haru-workspace/workspace-supervisor.py
 ExecStartPre=/usr/bin/test -r /etc/haru-workspace/servers.json
-ExecStart=/opt/haru-workspace/proxy/bin/mcp-proxy --host 127.0.0.1 --port 8766 --named-server-config /etc/haru-workspace/servers.json
+ExecStart=/opt/haru-workspace/proxy/bin/python /opt/haru-workspace/workspace-supervisor.py --proxy /opt/haru-workspace/proxy/bin/mcp-proxy --host 127.0.0.1 --port 8766 --named-server-config /etc/haru-workspace/servers.json
 Restart=on-failure
 RestartSec=2s
 TimeoutStopSec=15s
